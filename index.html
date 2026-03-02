@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pembagian Juz Qur'an</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f2027">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+
+<style>
+body{
+    background: linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+    min-height:100vh;
+    color:white;
+}
+.card-custom{
+    background: rgba(255,255,255,0.08);
+    backdrop-filter: blur(10px);
+    border-radius:20px;
+    border:1px solid rgba(255,255,255,0.2);
+}
+.table{ color:white;}
+.btn-rounded{ border-radius:50px; }
+.histori-item{
+    background: linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+    padding:10px;
+    border-radius:10px;
+    margin-bottom:8px;
+    font-size:14px;
+}
+textarea{
+    background: rgba(255,255,255,0.1);
+    color:white;
+}
+.kiri{text-align: left;}
+.table-responsive{border-radius: 7px;}
+</style>
+</head>
+<body>
+
+<div class="container py-4">
+
+<div class="text-center mb-4">
+    <h2 class="fw-bold">Pembagian Juz Al-Qur'an</h2>
+    <h4 class="">Rutinan Malam Selasa</h4>
+</div>
+
+<!-- ================= GENERATOR ================= -->
+<div class="card card-custom p-4 mb-4">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-4">
+            <label class="text-light mb-2 h6">Mulai dari Juz</label>
+            <input type="number" min="1" max="30" value="1" id="startJuzInput" class="form-control">
+        </div>
+        <div class="col-md-8 d-flex justify-content-between">
+            <button class="btn btn-info me-2 fw-bold" onclick="generateJuz()">
+                Bagi Juz
+            </button>
+            <button class="btn btn-warning me-2" onclick="nextPutaran()">
+                Bagian Berikutnya
+            </button>
+            <button class="btn btn-success" onclick="previewWA()">
+                Kirim WA
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ================= PREVIEW WA ================= -->
+<div class="card card-custom p-4 mb-4 d-none" id="waPreviewCard">
+    <h6 class="text-light">Preview Pesan WhatsApp</h6>
+    <textarea id="waText" rows="8" class="form-control mb-3"></textarea>
+    <button class="btn btn-success" onclick="kirimWA()">Kirim ke WhatsApp</button>
+</div>
+
+<!-- ================= HASIL ================= -->
+<div class="card card-custom p-4 mb-4">
+    <h6 class="text-light">Hasil Pembagian</h6>
+    <div class="table-responsive">
+        <table class="table table-bordered text-center">
+            <thead class="table-light text-dark">
+                <tr>
+                    <th>No</th>
+                    <th class="kiri">Nama</th>
+                    <th>Juz</th>
+                </tr>
+            </thead>
+            <tbody id="hasilTable"></tbody>
+        </table>
+    </div>
+</div>
+
+
+<!-- ================= HISTORI ================= -->
+<div class="card card-custom p-4 mb-4">
+    <h6 class="text-light">Histori Pembagian</h6>
+    <div id="historiContainer" class=" text-light opacity-75"></div>
+<div class="text-center mt-3">
+    <button class="btn btn-outline-light opacity-75 btn-sm" onclick="loadMoreHistori()">
+        Muat Lebih Banyak
+    </button>
+</div>
+</div>
+
+<!-- ================= NAMA ================= -->
+<div class="card card-custom p-4">
+    <h6 class="text-light">Daftar Nama</h6>
+    <div id="namaContainer"></div>
+    <div class="input-group mt-3">
+        <input type="text" id="namaBaru" class="form-control" placeholder="Tambah nama ketik disini">
+        <button class="btn btn-primary" onclick="tambahNama()">
+            <i class="bi bi-plus"></i>
+        </button>
+    </div>
+</div>
+</div>
+<footer class="text-center mt-4 py-3 bg-dark opacity-75" style="border-radius: 15px 15px 0 0;">
+    <div class="mb-1 fw-bold">Tambah Berkah lan Istiqomah</div>
+    <small>
+        ©<span id="currentYear"></span> Rutinan Malam Selasa - Kandang Banteng
+    </small>
+</footer>
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, push, set, onValue, remove, update } 
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAZB64iFTGI2O8X-Ww1dltICSgHFp16UZs",
+  authDomain: "database-umum.firebaseapp.com",
+  databaseURL: "https://database-umum-default-rtdb.firebaseio.com",
+  projectId: "database-umum",
+  storageBucket: "database-umum.firebasestorage.app",
+  messagingSenderId: "682180323327",
+  appId: "1:682180323327:web:d3faf3cf746a35e7ff69ca"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+let hasilTerakhir = [];
+let historiLimit = 5;
+// ================= CRUD NAMA =================
+
+function renderNama(data){
+    const container = document.getElementById("namaContainer");
+    container.innerHTML = "";
+
+    for(const id in data){
+        container.innerHTML += `
+        <div class="input-group mb-2">
+            <input type="text" class="form-control"
+                value="${data[id].nama}"
+                onchange="updateNama('${id}', this.value)">
+            <button class="btn btn-danger" onclick="hapusNama('${id}')">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>`;
+    }
+}
+
+window.tambahNama = async function(){
+    const input = document.getElementById("namaBaru");
+    const nama = input.value.trim();
+    if(!nama) return;
+
+    await push(ref(db,"khataman/nama"),{
+        nama,
+        createdAt: Date.now()
+    });
+
+    input.value="";
+};
+
+window.updateNama = async function(id,nama){
+    await update(ref(db,"khataman/nama/"+id),{nama});
+};
+
+window.hapusNama = async function(id){
+    await remove(ref(db,"khataman/nama/"+id));
+};
+
+onValue(ref(db,"khataman/nama"), snap=>{
+    if(snap.exists()) renderNama(snap.val());
+});
+
+// ================= GENERATE =================
+
+window.generateJuz = async function(){
+
+    const startJuz = parseInt(document.getElementById("startJuzInput").value);
+    if(startJuz < 1 || startJuz > 30) return alert("Juz 1 - 30 saja");
+
+    const snapshot = await new Promise(resolve=>{
+        onValue(ref(db,"khataman/nama"), s=>resolve(s),{onlyOnce:true});
+    });
+
+    if(!snapshot.exists()) return;
+
+    const data = snapshot.val();
+    const hasilTable = document.getElementById("hasilTable");
+    hasilTable.innerHTML="";
+    hasilTerakhir=[];
+
+    let currentJuz = startJuz;
+    let no=1;
+
+    for(const id in data){
+
+        let juz1=currentJuz;
+        let juz2=currentJuz+1;
+        if(juz2>30) juz2-=30;
+
+        hasilTerakhir.push({
+            nama:data[id].nama,
+            juz:`${juz1},${juz2}`
+        });
+
+        hasilTable.innerHTML+=`
+        <tr>
+            <td>${no++}</td>
+            <td class="kiri">${data[id].nama}</td>
+            <td>${juz1},${juz2}</td>
+        </tr>`;
+
+        currentJuz+=2;
+        if(currentJuz>30) currentJuz-=30;
+    }
+
+    await push(ref(db,"khataman/histori"),{
+        tanggal:new Date().toLocaleString(),
+        startJuz,
+        hasil:hasilTerakhir
+    });
+};
+
+window.nextPutaran=function(){
+    let val=parseInt(document.getElementById("startJuzInput").value);
+    val+=2;
+    if(val>30) val-=30;
+    document.getElementById("startJuzInput").value=val;
+    generateJuz();
+};
+
+// ================= HISTORI VIEW =================
+// ================= HISTORI VIEW =================
+
+function renderHistori(data){
+
+    const container = document.getElementById("historiContainer");
+    container.innerHTML = "";
+
+    const keys = Object.keys(data).reverse(); // terbaru dulu
+    const limitedKeys = keys.slice(0, historiLimit);
+
+    limitedKeys.forEach(id=>{
+
+        container.innerHTML+=`
+        <div class="histori-item">
+            <div style="cursor:pointer" onclick="toggleDetail('${id}')">
+                <strong>${data[id].tanggal}</strong><br>
+                Mulai dari Juz: ${data[id].startJuz} |
+                Total Peserta: ${data[id].hasil.length}
+                <div class="text-info mt-1">
+                    <small>Klik untuk lihat detail</small>
+                </div>
+            </div>
+            <div id="detail-${id}" class="mt-2 d-none"></div>
+        </div>`;
+    });
+}
+
+onValue(ref(db,"khataman/histori"),snap=>{
+    if(!snap.exists()) return;
+    renderHistori(snap.val());
+});
+
+window.loadMoreHistori = function(){
+    historiLimit += 5;
+
+    // ambil ulang data dan render
+    onValue(ref(db,"khataman/histori"),snap=>{
+        if(!snap.exists()) return;
+        renderHistori(snap.val());
+    }, {onlyOnce:true});
+};
+// ================= DETAIL HISTORI =================
+
+window.toggleDetail = async function(id){
+
+    const detailDiv = document.getElementById("detail-"+id);
+
+    // kalau sudah terbuka → tutup
+    if(!detailDiv.classList.contains("d-none")){
+        detailDiv.classList.add("d-none");
+        detailDiv.innerHTML="";
+        return;
+    }
+
+    // ambil data sekali saja
+    const snapshot = await new Promise(resolve=>{
+        onValue(ref(db,"khataman/histori/"+id), s=>resolve(s), {onlyOnce:true});
+    });
+
+    if(!snapshot.exists()) return;
+
+    const data = snapshot.val();
+
+    let html = `
+        <div class="table-responsive mt-2">
+        <table class="table table-sm table-bordered text-center mb-0">
+        <thead class="table-light text-dark">
+        <tr>
+            <th>No</th>
+            <th class="kiri">Nama</th>
+            <th>Juz</th>
+        </tr>
+        </thead>
+        <tbody>
+    `;
+
+    data.hasil.forEach((item,i)=>{
+        html+=`
+        <tr>
+            <td>${i+1}</td>
+            <td class="kiri">${item.nama}</td>
+            <td>${item.juz}</td>
+        </tr>`;
+    });
+
+    html+=`</tbody></table></div>`;
+
+    detailDiv.innerHTML = html;
+    detailDiv.classList.remove("d-none");
+};
+// ================= SHARE WA =================
+
+window.previewWA=function(){
+
+    if(hasilTerakhir.length===0){
+        alert("Bagi Juz dulu ya 😊");
+        return;
+    }
+
+    let text = "Assalamualaikum\n";
+    text += "Meniko Juz kangge khataman Qur'an *Malem Sabtu Nuzul Qur'an Bulan Ramadhan 2026*\n\n";
+
+    hasilTerakhir.forEach((item,i)=>{
+        text += `${i+1}. ${item.nama} ${item.juz}\n`;
+    });
+
+    text += "\nMonggo di centang hijau sing mpun di waos\n";
+    text += "Kangge hadiah Fatihah makmum teng imam tadarus";
+
+    document.getElementById("waText").value=text;
+    document.getElementById("waPreviewCard").classList.remove("d-none");
+};
+
+window.kirimWA=function(){
+    const text=document.getElementById("waText").value;
+    const url="https://wa.me/?text="+encodeURIComponent(text);
+    window.open(url,"_blank");
+};
+// ================= COPYRIGHT =================
+document.getElementById("currentYear").textContent = new Date().getFullYear();
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("service-worker.js")
+      .then(() => console.log("PWA aktif"))
+      .catch(err => console.log("SW gagal:", err));
+  });
+}
+</script>
+</body>
+</html>
