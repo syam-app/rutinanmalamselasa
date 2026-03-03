@@ -38,11 +38,42 @@ textarea{
 }
 .kiri{text-align: left;}
 .table-responsive{border-radius: 7px;}
+#namaContainer .form-control {
+    font-size: 13px;
+    padding: 6px 10px;
+}
+
+#namaContainer .btn {
+    padding: 4px 10px;
+}
+
+#namaBaru {
+    font-size: 13px;
+    padding: 6px 10px;
+}
+
+.input-group .btn-primary {
+    padding: 6px 12px;
+}
+.table {
+    color: white;
+    font-size: 14px;
+}
+
+.table th,
+.table td {
+    padding: 6px 8px;
+    vertical-align: middle;
+}
+
+.table thead th {
+    font-size: 13px;
+}
 </style>
 </head>
 <body>
 
-<div class="container py-4">
+<div class="container py-5">
 
 <div class="text-center mb-4">
     <h2 class="fw-bold">Pembagian Juz Al-Qur'an</h2>
@@ -70,18 +101,11 @@ textarea{
     </div>
 </div>
 
-<!-- ================= PREVIEW WA ================= -->
-<div class="card card-custom p-4 mb-4 d-none" id="waPreviewCard">
-    <h6 class="text-light">Preview Pesan WhatsApp</h6>
-    <textarea id="waText" rows="8" class="form-control mb-3"></textarea>
-    <button class="btn btn-success" onclick="kirimWA()">Kirim ke WhatsApp</button>
-</div>
-
 <!-- ================= HASIL ================= -->
 <div class="card card-custom p-4 mb-4">
     <h6 class="text-light">Hasil Pembagian</h6>
     <div class="table-responsive">
-        <table class="table table-bordered text-center">
+        <table class="table table-sm table-bordered text-center">
             <thead class="table-light text-dark">
                 <tr>
                     <th>No</th>
@@ -124,6 +148,28 @@ textarea{
         ©<span id="currentYear"></span> Rutinan Malam Selasa - Kandang Banteng
     </small>
 </footer>
+
+<!-- ================= MODAL WA ================= -->
+<div class="modal fade" id="waModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content bg-dark text-light rounded-4">
+      <div class="modal-header border-0">
+        <h5 class="modal-title">Preview Pesan WhatsApp</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <textarea id="waText" rows="10" class="form-control mb-3"></textarea>
+      </div>
+      <div class="modal-footer border-0">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+        <button class="btn btn-success" onclick="kirimWA()">
+          <i class="bi bi-whatsapp"></i> Kirim ke WhatsApp
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -248,8 +294,6 @@ window.nextPutaran=function(){
 };
 
 // ================= HISTORI VIEW =================
-// ================= HISTORI VIEW =================
-
 function renderHistori(data){
 
     const container = document.getElementById("historiContainer");
@@ -332,17 +376,25 @@ window.toggleDetail = async function(id){
             <td>${item.juz}</td>
         </tr>`;
     });
+html+=`</tbody></table></div>
 
-    html+=`</tbody></table></div>`;
-
+<div class="text-end mt-2">
+    <button class="btn btn-sm btn-success"
+        onclick='previewWA(${JSON.stringify(data.hasil)})'>
+        <i class="bi bi-whatsapp"></i> Kirim WA
+    </button>
+</div>
+`;
     detailDiv.innerHTML = html;
     detailDiv.classList.remove("d-none");
 };
 // ================= SHARE WA =================
 
-window.previewWA=function(){
+window.previewWA=function(customData=null){
 
-    if(hasilTerakhir.length===0){
+    let data = customData || hasilTerakhir;
+
+    if(!data || data.length===0){
         alert("Bagi Juz dulu ya 😊");
         return;
     }
@@ -350,7 +402,7 @@ window.previewWA=function(){
     let text = "Assalamualaikum\n";
     text += "Meniko Juz kangge khataman Qur'an *Malem Sabtu Nuzul Qur'an Bulan Ramadhan 2026*\n\n";
 
-    hasilTerakhir.forEach((item,i)=>{
+    data.forEach((item,i)=>{
         text += `${i+1}. ${item.nama} ${item.juz}\n`;
     });
 
@@ -358,13 +410,9 @@ window.previewWA=function(){
     text += "Kangge hadiah Fatihah makmum teng imam tadarus";
 
     document.getElementById("waText").value=text;
-    document.getElementById("waPreviewCard").classList.remove("d-none");
-};
 
-window.kirimWA=function(){
-    const text=document.getElementById("waText").value;
-    const url="https://wa.me/?text="+encodeURIComponent(text);
-    window.open(url,"_blank");
+    const modal = new bootstrap.Modal(document.getElementById('waModal'));
+    modal.show();
 };
 // ================= COPYRIGHT =================
 document.getElementById("currentYear").textContent = new Date().getFullYear();
